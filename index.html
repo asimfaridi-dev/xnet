@@ -1,0 +1,154 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>xnet - Video Sharing Site</title>
+  <style>
+    body {
+      background-color: #111;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    h1 {
+      color: #f00;
+      text-align: center;
+    }
+    .video-container {
+      max-width: 720px;
+      margin: 20px auto;
+      background: #222;
+      padding: 20px;
+      border-radius: 10px;
+    }
+    video {
+      width: 100%;
+      border-radius: 10px;
+    }
+    .buttons {
+      margin-top: 10px;
+    }
+    .buttons button {
+      margin-right: 10px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .like {
+      background-color: #e74c3c;
+      color: #fff;
+    }
+    .dislike {
+      background-color: #34495e;
+      color: #fff;
+    }
+    .comments {
+      margin-top: 20px;
+    }
+    .comments input, .comments button {
+      padding: 10px;
+      margin-top: 5px;
+    }
+    .comments ul {
+      list-style: none;
+      padding-left: 0;
+    }
+    .comments li {
+      background-color: #333;
+      margin: 5px 0;
+      padding: 10px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>xnet - Video Sharing</h1>
+  <div class="video-container">
+    <video id="videoPlayer" controls>
+      <source src="sample.mp4" type="video/mp4" />
+      Your browser does not support HTML5 video.
+    </video>
+
+    <div class="buttons">
+      <button class="like" onclick="likeVideo()">Like (<span id="likeCount">0</span>)</button>
+      <button class="dislike" onclick="dislikeVideo()">Dislike (<span id="dislikeCount">0</span>)</button>
+    </div>
+
+    <div class="comments">
+      <h3>Comments</h3>
+      <input type="text" id="commentInput" placeholder="Write a comment..." />
+      <button onclick="submitComment()">Submit</button>
+      <ul id="commentList"></ul>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAqkSWU9cQQHqYC3V0z0KQV_ODEpirMk6k",
+      authDomain: "xnet106.firebaseapp.com",
+      projectId: "xnet106",
+      storageBucket: "xnet106.firebasestorage.app",
+      messagingSenderId: "519342407669",
+      appId: "1:519342407669:web:3032af65e58f066e56eabc",
+      measurementId: "G-J8CEW0H28R"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const videoRef = doc(db, "videos", "sample");
+
+    async function loadData() {
+      const docSnap = await getDoc(videoRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        document.getElementById("likeCount").innerText = data.likes || 0;
+        document.getElementById("dislikeCount").innerText = data.dislikes || 0;
+        const commentList = document.getElementById("commentList");
+        commentList.innerHTML = "";
+        (data.comments || []).forEach(comment => {
+          const li = document.createElement("li");
+          li.innerText = comment;
+          commentList.appendChild(li);
+        });
+      } else {
+        await setDoc(videoRef, { likes: 0, dislikes: 0, comments: [] });
+      }
+    }
+
+    async function likeVideo() {
+      const docSnap = await getDoc(videoRef);
+      const data = docSnap.data();
+      const newLikes = (data.likes || 0) + 1;
+      await updateDoc(videoRef, { likes: newLikes });
+      document.getElementById("likeCount").innerText = newLikes;
+    }
+
+    async function dislikeVideo() {
+      const docSnap = await getDoc(videoRef);
+      const data = docSnap.data();
+      const newDislikes = (data.dislikes || 0) + 1;
+      await updateDoc(videoRef, { dislikes: newDislikes });
+      document.getElementById("dislikeCount").innerText = newDislikes;
+    }
+
+    async function submitComment() {
+      const commentInput = document.getElementById("commentInput");
+      const comment = commentInput.value.trim();
+      if (comment === "") return;
+      await updateDoc(videoRef, { comments: arrayUnion(comment) });
+      commentInput.value = "";
+      loadData();
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
